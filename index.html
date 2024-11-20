@@ -36,9 +36,8 @@
         /* Arrow button */
         .arrow-toggle {
             position: absolute;
-            top: -25px; /* Position at the top of the panel */
-            left: 50%;
-            transform: translateX(-50%);
+            top: 20px; /* Position at the top left corner of the map */
+            left: 10px;
             background-color: #007BFF;
             color: white;
             border: none;
@@ -186,10 +185,32 @@
             tracking = !tracking;
             if (tracking) {
                 bikes.forEach((bike) => bike.marker.addTo(map));
+
+                // Add polyline and distance labels
+                bikes.forEach((bike) => {
+                    const selectedBike = bikes.find((b) => b.name === document.getElementById("bikeDropdown").value);
+                    if (selectedBike) {
+                        // Create polyline and calculate distance
+                        const latlngs = [selectedBike.position, bike.position];
+                        bike.polyline = L.polyline(latlngs, { color: 'blue' }).addTo(map);
+                        
+                        const distance = map.distance(latlngs[0], latlngs[1]); // Distance in meters
+                        bike.distanceLabel = L.tooltip()
+                            .setLatLng([ (latlngs[0][0] + latlngs[1][0]) / 2, (latlngs[0][1] + latlngs[1][1]) / 2])
+                            .setContent(`${Math.round(distance)} meters`)
+                            .addTo(map);
+                    }
+                });
+
                 this.innerText = "Stop Tracking";
                 this.classList.add("inactive");
             } else {
                 bikes.forEach((bike) => map.removeLayer(bike.marker));
+                bikes.forEach((bike) => {
+                    if (bike.polyline) map.removeLayer(bike.polyline);
+                    if (bike.distanceLabel) map.removeLayer(bike.distanceLabel);
+                });
+
                 this.innerText = "Track Bikes";
                 this.classList.remove("inactive");
             }
