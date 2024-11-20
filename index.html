@@ -7,38 +7,48 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        /* Map & container styling */
-        #map { height: 600px; width: 100%; }
-        
-        /* Overlay and control styling */
+        /* Map styling */
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+
+        /* Panel Styling */
         .top-bar {
             position: absolute;
             top: 15px;
             left: 15px;
             display: flex;
             flex-direction: column;
-            width: 250px;
+            width: 300px;
             z-index: 1000;
-            background-color: rgba(255, 255, 255, 0.8);
+            background-color: rgba(255, 255, 255, 0.6); /* Increased transparency */
             padding: 10px;
             border-radius: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
             transition: transform 0.3s;
         }
 
-        /* Styles for when the panel is hidden */
-        .top-bar.hidden { transform: translateX(-260px); }
+        .top-bar.hidden {
+            transform: translateY(-400px);
+        }
 
         .arrow-toggle {
             position: absolute;
-            right: -20px;
-            top: 10px;
+            bottom: -25px; /* Relocated arrow beneath the panel */
+            left: 50%;
+            transform: translateX(-50%);
             background-color: #007BFF;
             color: white;
             border: none;
             border-radius: 50%;
-            padding: 5px;
+            width: 40px; /* Enlarged */
+            height: 40px; /* Enlarged */
+            font-size: 20px; /* Enlarged */
             cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .search-bar, .dropdown {
@@ -50,6 +60,16 @@
             font-size: 14px;
         }
 
+        /* Bottom-right buttons */
+        .bottom-right-buttons {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
         .button {
             padding: 10px;
             margin: 5px 0;
@@ -58,15 +78,15 @@
             border: none;
             border-radius: 10px;
             cursor: pointer;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    
+
     <!-- Top overlay bars for Google Maps-like search functionality -->
     <div class="top-bar" id="topBar">
-        <button class="arrow-toggle" id="toggleArrow">▶</button>
         <input type="text" class="search-bar" placeholder="Enter Starting Point (e.g., Phạm Văn Bạch)" disabled value="Phạm Văn Bạch, Cầu Giấy, Hanoi">
         <select class="dropdown" id="bikeDropdown">
             <option value="">Select Bike to Track</option>
@@ -74,6 +94,11 @@
             <option value="2">Bike 2</option>
             <option value="3">Bike 3</option>
         </select>
+        <button class="arrow-toggle" id="toggleArrow">▼</button>
+    </div>
+
+    <!-- Bottom-right buttons -->
+    <div class="bottom-right-buttons">
         <button class="button" id="toggleTracking">Track Bikes</button>
         <button class="button" id="toggleLocation">Current Location</button>
     </div>
@@ -141,54 +166,17 @@
             }
         });
 
-        // Function to draw path with distance label
-        function drawPathToBike(bike) {
-            const distance = map.distance(centerPoint, bike.position).toFixed(2); // Distance in meters
-            const latLngs = [centerPoint, bike.position];
-
-            if (bike.polyline) map.removeLayer(bike.polyline);
-            if (bike.distanceLabel) map.removeLayer(bike.distanceLabel);
-
-            bike.polyline = L.polyline(latLngs, { color: 'blue', weight: 3 }).addTo(map);
-            bike.distanceLabel = L.marker([(centerPoint[0] + bike.position[0]) / 2, (centerPoint[1] + bike.position[1]) / 2], {
-                icon: L.divIcon({
-                    className: 'distance-label',
-                    html: `<span>${distance} meters</span>`,
-                    iconSize: [80, 20]
-                })
-            }).addTo(map);
-        }
-
         // Bike tracking toggle
         let tracking = false;
 
         document.getElementById("toggleTracking").addEventListener("click", function() {
             tracking = !tracking;
             if (tracking) {
-                bikes.forEach((bike) => {
-                    bike.marker.addTo(map);
-                });
+                bikes.forEach((bike) => bike.marker.addTo(map));
                 this.innerText = "Stop Tracking";
             } else {
-                bikes.forEach((bike) => {
-                    map.removeLayer(bike.marker);
-                    if (bike.polyline) map.removeLayer(bike.polyline);
-                    if (bike.distanceLabel) map.removeLayer(bike.distanceLabel);
-                });
+                bikes.forEach((bike) => map.removeLayer(bike.marker));
                 this.innerText = "Track Bikes";
-            }
-        });
-
-        // Bike selection and path drawing
-        document.getElementById("bikeDropdown").addEventListener("change", function() {
-            const selectedBikeIndex = parseInt(this.value) - 1;
-            bikes.forEach((bike, index) => {
-                if (bike.polyline) map.removeLayer(bike.polyline);
-                if (bike.distanceLabel) map.removeLayer(bike.distanceLabel);
-            });
-
-            if (selectedBikeIndex >= 0 && tracking) {
-                drawPathToBike(bikes[selectedBikeIndex]);
             }
         });
 
@@ -196,7 +184,7 @@
         document.getElementById("toggleArrow").addEventListener("click", function() {
             const topBar = document.getElementById("topBar");
             topBar.classList.toggle("hidden");
-            this.innerText = topBar.classList.contains("hidden") ? "◀" : "▶";
+            this.innerText = topBar.classList.contains("hidden") ? "▲" : "▼";
         });
     </script>
 </body>
