@@ -23,10 +23,7 @@
 </head>
 <body>
     <h1>Track Motorbikes with Paths</h1>
-    <!-- Leaflet Map -->
     <div id="map"></div>
-
-    <!-- Toggle Controls -->
     <div class="controls">
         <button id="toggle-tracking">Track Bikes</button>
         <button id="show-paths">Show Paths</button>
@@ -41,91 +38,98 @@
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Motorbike Icons
-        function createBikeIcon(color) {
-            return L.divIcon({
-                html: `<div style="background-color:${color};border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;">🏍</div>`,
-                iconSize: [20, 20]
+        // Define bike icons with provided images
+        function createBikeIcon(url) {
+            return L.icon({
+                iconUrl: url,
+                iconSize: [40, 40], // Icon size
+                iconAnchor: [20, 20], // Anchor point
+                popupAnchor: [0, -20] // Popup position
             });
         }
 
         // Bike Data
         var bikes = [
-            { name: "Bike 1", coords: [21.0227396, 105.8369637], color: "red", marker: null },
-            { name: "Bike 2", coords: [21.0247396, 105.8379637], color: "blue", marker: null },
-            { name: "Bike 3", coords: [21.0267396, 105.8399637], color: "green", marker: null }
+            { 
+                name: "Bike 1", 
+                icon: createBikeIcon("https://i.postimg.cc/wxQSHhBT/bike-1.webp"), 
+                path: [[21.0227396, 105.8369637], [21.0235, 105.8377], [21.0248, 105.8389], [21.0260, 105.8372]],
+                marker: null 
+            },
+            { 
+                name: "Bike 2", 
+                icon: createBikeIcon("https://i.postimg.cc/8PkxCjFd/bike-2.webp"), 
+                path: [[21.0247396, 105.8379637], [21.0252, 105.8392], [21.0265, 105.8384], [21.0278, 105.8377]],
+                marker: null 
+            },
+            { 
+                name: "Bike 3", 
+                icon: createBikeIcon("https://i.postimg.cc/3JLV0Yps/bike-3.webp"), 
+                path: [[21.0267396, 105.8399637], [21.0275, 105.8389], [21.0288, 105.8401], [21.0290, 105.8375]],
+                marker: null 
+            }
         ];
 
-        // Define Paths for Each Bike
-        const paths = [
-            [[21.0227396, 105.8369637], [21.0237396, 105.8379637], [21.0247396, 105.8389637]],
-            [[21.0247396, 105.8379637], [21.0257396, 105.8389637], [21.0267396, 105.8399637]],
-            [[21.0267396, 105.8399637], [21.0277396, 105.8409637], [21.0287396, 105.8419637]]
-        ];
-
-        // Add Markers and Polyline for Bikes
-        bikes.forEach((bike, index) => {
-            // Add Marker
-            bike.marker = L.marker(bike.coords, { icon: createBikeIcon(bike.color) })
+        // Initialize Markers
+        bikes.forEach((bike) => {
+            bike.marker = L.marker(bike.path[0], { icon: bike.icon })
                 .bindPopup(`${bike.name} is here!`);
         });
 
-        // Function to Toggle Tracking
+        // Toggle Tracking Button
         var trackingEnabled = false;
         function toggleTracking() {
             trackingEnabled = !trackingEnabled;
-
             bikes.forEach((bike) => {
                 if (trackingEnabled) {
-                    bike.marker.addTo(map); // Show markers
+                    bike.marker.addTo(map); // Add bike markers
                 } else {
-                    map.removeLayer(bike.marker); // Remove markers
+                    map.removeLayer(bike.marker); // Remove bike markers
                 }
             });
 
-            document.getElementById('toggle-tracking').innerText = trackingEnabled
+            document.getElementById("toggle-tracking").innerText = trackingEnabled
                 ? "Stop Tracking"
                 : "Track Bikes";
         }
 
-        // Show Paths on the Map
+        // Show Paths Button
         var pathPolylines = [];
         function showPaths() {
-            // Remove existing paths if already added
+            // Remove paths if already shown
             if (pathPolylines.length > 0) {
                 pathPolylines.forEach((polyline) => map.removeLayer(polyline));
                 pathPolylines = [];
-                document.getElementById('show-paths').innerText = "Show Paths";
+                document.getElementById("show-paths").innerText = "Show Paths";
                 return;
             }
 
             // Draw paths
-            paths.forEach((path, index) => {
-                const polyline = L.polyline(path, { color: bikes[index].color, weight: 3 }).addTo(map);
+            bikes.forEach((bike) => {
+                const polyline = L.polyline(bike.path, { color: "blue", weight: 2 }).addTo(map);
                 pathPolylines.push(polyline);
             });
 
-            document.getElementById('show-paths').innerText = "Hide Paths";
+            document.getElementById("show-paths").innerText = "Hide Paths";
         }
 
         // Simulate Bike Movement
-        function moveBike(index, path) {
+        function moveBike(bike) {
             let i = 0;
             setInterval(() => {
                 if (trackingEnabled) {
-                    bikes[index].coords = path[i]; // Update coordinates
-                    bikes[index].marker.setLatLng(path[i]); // Update marker position
-                    i = (i + 1) % path.length; // Loop through path
+                    bike.marker.setLatLng(bike.path[i]); // Update position
+                    i = (i + 1) % bike.path.length; // Loop through path
                 }
-            }, 2000); // Move every 2 seconds
+            }, 2000); // Every 2 seconds
         }
 
-        // Start Moving Bikes
-        paths.forEach((path, index) => moveBike(index, path));
+        // Start Moving Each Bike
+        bikes.forEach((bike) => moveBike(bike));
 
-        // Event Listeners for Buttons
-        document.getElementById('toggle-tracking').addEventListener('click', toggleTracking);
-        document.getElementById('show-paths').addEventListener('click', showPaths);
+        // Attach Event Listeners
+        document.getElementById("toggle-tracking").addEventListener("click", toggleTracking);
+        document.getElementById("show-paths").addEventListener("click", showPaths);
     </script>
 </body>
 </html>
