@@ -9,19 +9,8 @@
     <style>
         /* Map & container styling */
         #map { height: 600px; width: 100%; }
-        .controls { position: absolute; top: 10px; left: 10px; width: 300px; z-index: 1000; }
-
-        /* Styling for search bars and buttons */
-        .search-bar, .dropdown {
-            width: 90%;
-            padding: 10px;
-            margin: 5px 0;
-            border: 2px solid #ccc;
-            border-radius: 25px;
-            font-size: 14px;
-        }
-
-        /* Overlay styles */
+        
+        /* Overlay and control styling */
         .top-bar {
             position: absolute;
             top: 15px;
@@ -30,10 +19,35 @@
             flex-direction: column;
             width: 250px;
             z-index: 1000;
-            background-color: rgba(255, 255, 255, 0.9);
+            background-color: rgba(255, 255, 255, 0.8);
             padding: 10px;
             border-radius: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s;
+        }
+
+        /* Styles for when the panel is hidden */
+        .top-bar.hidden { transform: translateX(-260px); }
+
+        .arrow-toggle {
+            position: absolute;
+            right: -20px;
+            top: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .search-bar, .dropdown {
+            width: 90%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 2px solid #ccc;
+            border-radius: 25px;
+            font-size: 14px;
         }
 
         .button {
@@ -45,14 +59,14 @@
             border-radius: 10px;
             cursor: pointer;
         }
-        
     </style>
 </head>
 <body>
     <div id="map"></div>
     
     <!-- Top overlay bars for Google Maps-like search functionality -->
-    <div class="top-bar">
+    <div class="top-bar" id="topBar">
+        <button class="arrow-toggle" id="toggleArrow">▶</button>
         <input type="text" class="search-bar" placeholder="Enter Starting Point (e.g., Phạm Văn Bạch)" disabled value="Phạm Văn Bạch, Cầu Giấy, Hanoi">
         <select class="dropdown" id="bikeDropdown">
             <option value="">Select Bike to Track</option>
@@ -67,13 +81,13 @@
     <script>
         // Initialize Leaflet Map centered on Hanoi
         var map = L.map('map').setView([21.0227396, 105.8369637], 15);
-        
+
         // OpenStreetMap Tile Layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Define bike and location icons with provided images
+        // Define bike and location icons
         function createIcon(url) {
             return L.icon({
                 iconUrl: url,
@@ -83,7 +97,6 @@
             });
         }
 
-        // Define icons
         const bikeIcons = [
             createIcon("https://i.postimg.cc/6qxZPGW0/bike-1-removebg-preview.png"),
             createIcon("https://i.postimg.cc/0jGS12rq/bike-2-removebg-preview.png"),
@@ -91,7 +104,7 @@
         ];
         const locationIcon = createIcon("https://i.postimg.cc/vZT43v7y/location.png");
 
-        // Randomly generate bike positions within 400-800 meters of the central point
+        // Random bike positions within 400-800 meters
         function getRandomPosition(center, minDistance, maxDistance) {
             const angle = Math.random() * Math.PI * 2;
             const distance = minDistance + Math.random() * (maxDistance - minDistance);
@@ -102,12 +115,12 @@
 
         const centerPoint = [21.0227396, 105.8369637];
         const bikes = [
-            { name: "Bike 1", icon: bikeIcons[0], position: getRandomPosition(centerPoint, 400, 800), marker: null, polyline: null },
-            { name: "Bike 2", icon: bikeIcons[1], position: getRandomPosition(centerPoint, 400, 800), marker: null, polyline: null },
-            { name: "Bike 3", icon: bikeIcons[2], position: getRandomPosition(centerPoint, 400, 800), marker: null, polyline: null }
+            { name: "Bike 1", icon: bikeIcons[0], position: getRandomPosition(centerPoint, 400, 800), marker: null, polyline: null, distanceLabel: null },
+            { name: "Bike 2", icon: bikeIcons[1], position: getRandomPosition(centerPoint, 400, 800), marker: null, polyline: null, distanceLabel: null },
+            { name: "Bike 3", icon: bikeIcons[2], position: getRandomPosition(centerPoint, 400, 800), marker: null, polyline: null, distanceLabel: null }
         ];
 
-        // Place bike markers on the map
+        // Place bike markers
         bikes.forEach((bike) => {
             bike.marker = L.marker(bike.position, { icon: bike.icon })
                 .bindPopup(`${bike.name} is here!`)
@@ -128,16 +141,26 @@
             }
         });
 
-        // Function to draw path from current location to bike
-        function drawPathToBike(bikePosition) {
-            if (currentPath) map.removeLayer(currentPath);
-            currentPath = L.polyline([centerPoint, bikePosition], { color: 'blue', weight: 3 });
-            map.addLayer(currentPath);
+        // Function to draw path with distance label
+        function drawPathToBike(bike) {
+            const distance = map.distance(centerPoint, bike.position).toFixed(2); // Distance in meters
+            const latLngs = [centerPoint, bike.position];
+
+            if (bike.polyline) map.removeLayer(bike.polyline);
+            if (bike.distanceLabel) map.removeLayer(bike.distanceLabel);
+
+            bike.polyline = L.polyline(latLngs, { color: 'blue', weight: 3 }).addTo(map);
+            bike.distanceLabel = L.marker([(centerPoint[0] + bike.position[0]) / 2, (centerPoint[1] + bike.position[1]) / 2], {
+                icon: L.divIcon({
+                    className: 'distance-label',
+                    html: `<span>${distance} meters</span>`,
+                    iconSize: [80, 20]
+                })
+            }).addTo(map);
         }
 
         // Bike tracking toggle
         let tracking = false;
-        let currentPath = null;
 
         document.getElementById("toggleTracking").addEventListener("click", function() {
             tracking = !tracking;
@@ -149,8 +172,9 @@
             } else {
                 bikes.forEach((bike) => {
                     map.removeLayer(bike.marker);
+                    if (bike.polyline) map.removeLayer(bike.polyline);
+                    if (bike.distanceLabel) map.removeLayer(bike.distanceLabel);
                 });
-                if (currentPath) map.removeLayer(currentPath);
                 this.innerText = "Track Bikes";
             }
         });
@@ -158,9 +182,21 @@
         // Bike selection and path drawing
         document.getElementById("bikeDropdown").addEventListener("change", function() {
             const selectedBikeIndex = parseInt(this.value) - 1;
+            bikes.forEach((bike, index) => {
+                if (bike.polyline) map.removeLayer(bike.polyline);
+                if (bike.distanceLabel) map.removeLayer(bike.distanceLabel);
+            });
+
             if (selectedBikeIndex >= 0 && tracking) {
-                drawPathToBike(bikes[selectedBikeIndex].position);
+                drawPathToBike(bikes[selectedBikeIndex]);
             }
+        });
+
+        // Toggle panel visibility with arrow button
+        document.getElementById("toggleArrow").addEventListener("click", function() {
+            const topBar = document.getElementById("topBar");
+            topBar.classList.toggle("hidden");
+            this.innerText = topBar.classList.contains("hidden") ? "◀" : "▶";
         });
     </script>
 </body>
