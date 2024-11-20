@@ -36,7 +36,7 @@
         /* Arrow button */
         .arrow-toggle {
             position: absolute;
-            top: -25px; /* Position at the top of the panel */
+            bottom: -25px; /* Fixed at the bottom of the panel */
             left: 50%;
             transform: translateX(-50%);
             background-color: #007BFF;
@@ -140,11 +140,11 @@
         ];
         const locationIcon = createIcon("https://i.postimg.cc/vZT43v7y/location.png");
 
-        // Fixed positions for bikes (near the current location)
+        // Fixed bike positions within 400-800 meters range
         const bikes = [
-            { name: "Bike 1", icon: bikeIcons[0], position: [21.025, 105.838], marker: null, polyline: null, distanceLabel: null },
-            { name: "Bike 2", icon: bikeIcons[1], position: [21.021, 105.839], marker: null, polyline: null, distanceLabel: null },
-            { name: "Bike 3", icon: bikeIcons[2], position: [21.023, 105.837], marker: null, polyline: null, distanceLabel: null }
+            { name: "Bike 1", icon: bikeIcons[0], position: [21.0229396, 105.8379637], marker: null, polyline: null, distanceLabel: null },
+            { name: "Bike 2", icon: bikeIcons[1], position: [21.0237396, 105.8369637], marker: null, polyline: null, distanceLabel: null },
+            { name: "Bike 3", icon: bikeIcons[2], position: [21.0217396, 105.8359637], marker: null, polyline: null, distanceLabel: null }
         ];
 
         // Place bike markers
@@ -179,25 +179,8 @@
                 bikes.forEach((bike) => bike.marker.addTo(map));
                 this.innerText = "Stop Tracking";
                 this.classList.add("inactive");
-
-                // Draw paths and distances when a bike is tracked
-                const selectedBike = document.getElementById("bikeDropdown").value;
-                if (selectedBike) {
-                    const bike = bikes[selectedBike - 1];
-                    const line = L.polyline([currentLocationMarker.getLatLng(), bike.marker.getLatLng()], { color: 'blue' }).addTo(map);
-                    const distance = map.distance(currentLocationMarker.getLatLng(), bike.marker.getLatLng()).toFixed(2); // Calculate distance in meters
-                    const distanceLabel = L.marker(line.getCenter(), {
-                        icon: L.divIcon({ className: 'leaflet-label', html: `${distance} meters` })
-                    }).addTo(map);
-                    bike.polyline = line;
-                    bike.distanceLabel = distanceLabel;
-                }
             } else {
-                bikes.forEach((bike) => {
-                    map.removeLayer(bike.marker);
-                    if (bike.polyline) map.removeLayer(bike.polyline);
-                    if (bike.distanceLabel) map.removeLayer(bike.distanceLabel);
-                });
+                bikes.forEach((bike) => map.removeLayer(bike.marker));
                 this.innerText = "Track Bikes";
                 this.classList.remove("inactive");
             }
@@ -207,7 +190,47 @@
         document.getElementById("toggleArrow").addEventListener("click", function() {
             const topBar = document.getElementById("topBar");
             topBar.classList.toggle("hidden");
+            this.innerText = topBar.classList.contains("hidden") ? "▲" : "▼";
         });
+
+        // Function to draw path between current location and selected bike
+        function drawPath(bike) {
+            if (bike.polyline) {
+                map.removeLayer(bike.polyline);
+            }
+
+            bike.polyline = L.polyline([currentLocationMarker.getLatLng(), bike.marker.getLatLng()], { color: 'blue' }).addTo(map);
+
+            // Calculate and display distance
+            const distance = currentLocationMarker.getLatLng().distanceTo(bike.marker.getLatLng()).toFixed(2);
+            if (bike.distanceLabel) {
+                map.removeLayer(bike.distanceLabel);
+            }
+
+            bike.distanceLabel = L.marker(bike.polyline.getCenter(), {
+                icon: L.divIcon({ className: 'leaflet-div-icon', html: `<div class="leaflet-popup-content">Distance: ${distance} m</div>` })
+            }).addTo(map);
+        }
+
+        // When a bike is selected from the dropdown
+        document.getElementById("bikeDropdown").addEventListener("change", function() {
+            const selectedBikeIndex = parseInt(this.value) - 1;
+            if (selectedBikeIndex >= 0 && selectedBikeIndex < bikes.length) {
+                drawPath(bikes[selectedBikeIndex]);
+            }
+        });
+
+        // Adding real-time location button
+        function showCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    map.setView([lat, lon], 15);
+                    currentLocationMarker.setLatLng([lat, lon]);
+                });
+            }
+        }
     </script>
 </body>
 </html>
