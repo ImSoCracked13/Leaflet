@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Enhanced Motorbike Tracking Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #map { height: 500px; width: 100%; }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .controls button, .controls select {
+            margin: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .top-bar, .bottom-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #f2f2f2;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <span>My Location</span>
+        <span id="destination">Destination: <select id="bike-select">
+            <option value="1">Bike 1</option>
+            <option value="2">Bike 2</option>
+            <option value="3">Bike 3</option>
+        </select></span>
+    </div>
+
+    <div id="map"></div>
+    
+    <div class="controls">
+        <button id="show-current-location">Show My Current Location</button>
+        <button id="track-bikes">Track Bikes</button>
+        <button id="show-path">Show Route to Selected Bike</button>
+    </div>
+
+    <script>
+        // Initialize the map
+        var map = L.map('map').setView([21.0227396, 105.8369637], 13);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Bike icons based on provided images
+        function createBikeIcon(url) {
+            return L.icon({
+                iconUrl: url,
+                iconSize: [40, 40], 
+                iconAnchor: [20, 20]
+            });
+        }
+
+        // Bike data with paths
+        var bikes = [
+            { 
+                id: 1, 
+                name: "Bike 1", 
+                icon: createBikeIcon("https://i.postimg.cc/wxQSHhBT/bike-1.webp"), 
+                path: [[21.0227396, 105.8369637], [21.0237, 105.8376], [21.0250, 105.8365]],
+                marker: null 
+            },
+            { 
+                id: 2, 
+                name: "Bike 2", 
+                icon: createBikeIcon("https://i.postimg.cc/8PkxCjFd/bike-2.webp"), 
+                path: [[21.0247396, 105.8379637], [21.0257, 105.8382], [21.0265, 105.8369]],
+                marker: null 
+            },
+            { 
+                id: 3, 
+                name: "Bike 3", 
+                icon: createBikeIcon("https://i.postimg.cc/3JLV0Yps/bike-3.webp"), 
+                path: [[21.0267396, 105.8399637], [21.0278, 105.8387], [21.0295, 105.8375]],
+                marker: null 
+            }
+        ];
+
+        // User's current location marker
+        var userMarker = L.marker([0, 0], { icon: L.icon({ iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.3.1/images/marker-icon.png' }) });
+        var userLocation = null;
+
+        // Get real-time location
+        document.getElementById('show-current-location').onclick = function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    userLocation = [position.coords.latitude, position.coords.longitude];
+                    userMarker.setLatLng(userLocation).addTo(map).bindPopup("You are here!").openPopup();
+                    map.setView(userLocation, 14);
+                });
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        };
+
+        // Initialize each bike marker
+        bikes.forEach((bike) => {
+            bike.marker = L.marker(bike.path[0], { icon: bike.icon }).bindPopup(`${bike.name}`);
+        });
+
+        // Track Bikes toggle button
+        var trackingEnabled = false;
+        document.getElementById("track-bikes").onclick = function() {
+            trackingEnabled = !trackingEnabled;
+            if (trackingEnabled) {
+                bikes.forEach((bike) => bike.marker.addTo(map));
+                this.textContent = "Stop Tracking";
+            } else {
+                bikes.forEach((bike) => map.removeLayer(bike.marker));
+                this.textContent = "Track Bikes";
+            }
+        };
+
+        // Animate bikes with fluid movement
+        function animateBike(bike) {
+            let i = 0;
+            setInterval(() => {
+                if (trackingEnabled) {
+                    bike.marker.setLatLng(bike.path[i]);
+                    i = (i + 1) % bike.path.length;
+                }
+            }, 1500); // Adjusted for smoother animation
+        }
+        
+        bikes.forEach((bike) => animateBike(bike));
+
+        // Show route to selected bike
+        var routePolyline = null;
+        document.getElementById("show-path").onclick = function() {
+            if (routePolyline) map.removeLayer(routePolyline); // Clear existing route
+
+            const selectedBikeId = parseInt(document.getElementById("bike-select").value);
+            const selectedBike = bikes.find(bike => bike.id === selectedBikeId);
+
+            if (userLocation && selectedBike) {
+                routePolyline = L.polyline([userLocation, selectedBike.path[0]], {
+                    color: 'blue',
+                    weight: 3,
+                    dashArray: '5, 10'
+                }).addTo(map);
+
+                map.fitBounds(routePolyline.getBounds());
+            } else {
+                alert("Please enable your location first and select a bike.");
+            }
+        };
+    </script>
+</body>
+</html>
