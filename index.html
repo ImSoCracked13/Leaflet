@@ -16,7 +16,7 @@
         /* Panel Styling */
         .top-bar {
             position: absolute;
-            top: 15px;
+            top: 0;
             left: 15px;
             display: flex;
             flex-direction: column;
@@ -73,12 +73,17 @@
         .button {
             padding: 10px;
             margin: 5px 0;
-            background-color: #007BFF;
+            background-color: rgba(0, 255, 0, 0.5); /* Light green with transparency */
             color: white;
             border: none;
             border-radius: 10px;
             cursor: pointer;
             font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        .button.inactive {
+            background-color: rgba(255, 0, 0, 0.5); /* Red when inactive */
         }
     </style>
 </head>
@@ -160,9 +165,11 @@
             if (map.hasLayer(currentLocationMarker)) {
                 map.removeLayer(currentLocationMarker);
                 this.innerText = "Current Location";
+                this.classList.add("inactive");
             } else {
                 currentLocationMarker.addTo(map);
                 this.innerText = "Hide Location";
+                this.classList.remove("inactive");
             }
         });
 
@@ -174,9 +181,11 @@
             if (tracking) {
                 bikes.forEach((bike) => bike.marker.addTo(map));
                 this.innerText = "Stop Tracking";
+                this.classList.remove("inactive");
             } else {
                 bikes.forEach((bike) => map.removeLayer(bike.marker));
                 this.innerText = "Track Bikes";
+                this.classList.add("inactive");
             }
         });
 
