@@ -36,7 +36,7 @@
         /* Arrow button */
         .arrow-toggle {
             position: absolute;
-            bottom: -25px; /* Position at the bottom of the panel */
+            top: -25px; /* Position at the top of the panel */
             left: 50%;
             transform: translateX(-50%);
             background-color: #007BFF;
@@ -140,11 +140,11 @@
         ];
         const locationIcon = createIcon("https://i.postimg.cc/vZT43v7y/location.png");
 
-        // Fixed bike positions near the current location (within 400-800 meters)
+        // Fixed positions for bikes (near the current location)
         const bikes = [
-            { name: "Bike 1", icon: bikeIcons[0], position: [21.025, 105.836], marker: null, polyline: null, distanceLabel: null },
-            { name: "Bike 2", icon: bikeIcons[1], position: [21.023, 105.837], marker: null, polyline: null, distanceLabel: null },
-            { name: "Bike 3", icon: bikeIcons[2], position: [21.022, 105.835], marker: null, polyline: null, distanceLabel: null }
+            { name: "Bike 1", icon: bikeIcons[0], position: [21.025, 105.838], marker: null, polyline: null, distanceLabel: null },
+            { name: "Bike 2", icon: bikeIcons[1], position: [21.021, 105.839], marker: null, polyline: null, distanceLabel: null },
+            { name: "Bike 3", icon: bikeIcons[2], position: [21.023, 105.837], marker: null, polyline: null, distanceLabel: null }
         ];
 
         // Place bike markers
@@ -172,35 +172,32 @@
 
         // Bike tracking toggle
         let tracking = false;
-        let polyline = null;
 
         document.getElementById("toggleTracking").addEventListener("click", function() {
             tracking = !tracking;
             if (tracking) {
-                bikes.forEach((bike) => {
-                    bike.marker.addTo(map);
-                    if (polyline) {
-                        map.removeLayer(polyline);
-                    }
-                });
-
-                // Draw distance line between bike and current location
-                const bikeToTrack = bikes.find(bike => bike.marker === map.getLayer(bike.marker._leaflet_id));
-
-                polyline = L.polyline([bikeToTrack.position, currentLocationMarker.getLatLng()], {color: 'blue'}).addTo(map);
-
-                // Calculate distance and display label on the polyline
-                const distance = bikeToTrack.position.distanceTo(currentLocationMarker.getLatLng()).toFixed(2); // in meters
-                const distanceLabel = L.divIcon({html: `${distance} meters`, className: 'leaflet-div-icon'});
-                L.marker(polyline.getCenter(), {icon: distanceLabel}).addTo(map);
-
+                bikes.forEach((bike) => bike.marker.addTo(map));
                 this.innerText = "Stop Tracking";
                 this.classList.add("inactive");
-            } else {
-                bikes.forEach((bike) => map.removeLayer(bike.marker));
-                if (polyline) {
-                    map.removeLayer(polyline);
+
+                // Draw paths and distances when a bike is tracked
+                const selectedBike = document.getElementById("bikeDropdown").value;
+                if (selectedBike) {
+                    const bike = bikes[selectedBike - 1];
+                    const line = L.polyline([currentLocationMarker.getLatLng(), bike.marker.getLatLng()], { color: 'blue' }).addTo(map);
+                    const distance = map.distance(currentLocationMarker.getLatLng(), bike.marker.getLatLng()).toFixed(2); // Calculate distance in meters
+                    const distanceLabel = L.marker(line.getCenter(), {
+                        icon: L.divIcon({ className: 'leaflet-label', html: `${distance} meters` })
+                    }).addTo(map);
+                    bike.polyline = line;
+                    bike.distanceLabel = distanceLabel;
                 }
+            } else {
+                bikes.forEach((bike) => {
+                    map.removeLayer(bike.marker);
+                    if (bike.polyline) map.removeLayer(bike.polyline);
+                    if (bike.distanceLabel) map.removeLayer(bike.distanceLabel);
+                });
                 this.innerText = "Track Bikes";
                 this.classList.remove("inactive");
             }
@@ -210,7 +207,6 @@
         document.getElementById("toggleArrow").addEventListener("click", function() {
             const topBar = document.getElementById("topBar");
             topBar.classList.toggle("hidden");
-            this.innerText = topBar.classList.contains("hidden") ? "▲" : "▼";
         });
     </script>
 </body>
