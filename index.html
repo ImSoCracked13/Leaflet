@@ -26,38 +26,32 @@
             padding: 10px;
             border-radius: 10px;
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
-            transition: transform 0.3s;
+            transition: transform 0.3s ease; /* Smooth transition */
         }
 
         .top-bar.hidden {
-            transform: translateY(-400px);
+            transform: translateY(-400px); /* Moves the panel up when hidden */
         }
 
+        /* Arrow button */
         .arrow-toggle {
             position: absolute;
-            bottom: -25px; /* Relocated arrow beneath the panel */
+            top: -25px; /* Position at the top of the panel */
             left: 50%;
             transform: translateX(-50%);
             background-color: #007BFF;
             color: white;
             border: none;
             border-radius: 50%;
-            width: 40px; /* Enlarged */
-            height: 40px; /* Enlarged */
-            font-size: 20px; /* Enlarged */
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
             cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
-        }
-
-        .search-bar, .dropdown {
-            width: 90%;
-            padding: 10px;
-            margin: 5px 0;
-            border: 2px solid #ccc;
-            border-radius: 25px;
-            font-size: 14px;
+            transition: transform 0.3s ease; /* Smooth transition */
+            z-index: 1001; /* Make sure it's above the panel */
         }
 
         /* Bottom-right buttons */
@@ -73,7 +67,7 @@
         .button {
             padding: 10px;
             margin: 5px 0;
-            background-color: rgba(0, 255, 0, 0.5); /* Light green with transparency */
+            background-color: rgba(0, 255, 0, 0.5); /* Light green */
             color: white;
             border: none;
             border-radius: 10px;
@@ -83,8 +77,18 @@
         }
 
         .button.inactive {
-            background-color: rgba(255, 0, 0, 0.5); /* Red when inactive */
+            background-color: rgba(255, 0, 0, 0.5); /* Red when active */
         }
+
+        .search-bar, .dropdown {
+            width: 90%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 2px solid #ccc;
+            border-radius: 25px;
+            font-size: 14px;
+        }
+
     </style>
 </head>
 <body>
@@ -99,7 +103,6 @@
             <option value="2">Bike 2</option>
             <option value="3">Bike 3</option>
         </select>
-        <button class="arrow-toggle" id="toggleArrow">▼</button>
     </div>
 
     <!-- Bottom-right buttons -->
@@ -107,6 +110,9 @@
         <button class="button" id="toggleTracking">Track Bikes</button>
         <button class="button" id="toggleLocation">Current Location</button>
     </div>
+
+    <!-- Arrow to toggle panel visibility -->
+    <button class="arrow-toggle" id="toggleArrow">▼</button>
 
     <script>
         // Initialize Leaflet Map centered on Hanoi
@@ -181,11 +187,11 @@
             if (tracking) {
                 bikes.forEach((bike) => bike.marker.addTo(map));
                 this.innerText = "Stop Tracking";
-                this.classList.remove("inactive");
+                this.classList.add("inactive");
             } else {
                 bikes.forEach((bike) => map.removeLayer(bike.marker));
                 this.innerText = "Track Bikes";
-                this.classList.add("inactive");
+                this.classList.remove("inactive");
             }
         });
 
