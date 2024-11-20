@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bike Tracking on Map</title>
+    <title>Motorbike Tracker</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         /* Map & container styling */
-        #map { height: 500px; width: 100%; }
+        #map { height: 600px; width: 100%; }
         .controls { position: absolute; top: 10px; left: 10px; width: 300px; z-index: 1000; }
-        
-        /* Styling for search bars and dropdown */
+
+        /* Styling for search bars and buttons */
         .search-bar, .dropdown {
             width: 90%;
             padding: 10px;
@@ -20,7 +20,7 @@
             border-radius: 25px;
             font-size: 14px;
         }
-        
+
         /* Overlay styles */
         .top-bar {
             position: absolute;
@@ -36,11 +36,16 @@
             box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
         }
 
-        .dropdown {
-            appearance: none;
-            background: white url('https://www.svgrepo.com/show/2046/chevron-down.svg') no-repeat right 10px center;
-            background-size: 12px;
+        .button {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
         }
+        
     </style>
 </head>
 <body>
@@ -55,6 +60,8 @@
             <option value="2">Bike 2</option>
             <option value="3">Bike 3</option>
         </select>
+        <button class="button" id="toggleTracking">Track Bikes</button>
+        <button class="button" id="toggleLocation">Current Location</button>
     </div>
 
     <script>
@@ -66,78 +73,94 @@
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // Define bike icons with provided images
-        function createBikeIcon(url) {
+        // Define bike and location icons with provided images
+        function createIcon(url) {
             return L.icon({
                 iconUrl: url,
-                iconSize: [40, 40], // Size of the icon
-                iconAnchor: [20, 20], // Anchor point of the icon
-                popupAnchor: [0, -20] // Popup position
+                iconSize: [40, 40],
+                iconAnchor: [20, 20],
+                popupAnchor: [0, -20]
             });
         }
 
-        // Bike information, each with a unique path that avoids buildings
-        var bikes = [
-            { 
-                name: "Bike 1", 
-                icon: createBikeIcon("https://i.postimg.cc/wxQSHhBT/bike-1.webp"), 
-                path: [[21.0227396, 105.8369637], [21.0235, 105.8375], [21.0242, 105.8378], [21.0258, 105.8374]],
-                marker: null,
-                polyline: null
-            },
-            { 
-                name: "Bike 2", 
-                icon: createBikeIcon("https://i.postimg.cc/8PkxCjFd/bike-2.webp"), 
-                path: [[21.0227396, 105.8369637], [21.0241, 105.8381], [21.0251, 105.8377], [21.0263, 105.8369]],
-                marker: null,
-                polyline: null
-            },
-            { 
-                name: "Bike 3", 
-                icon: createBikeIcon("https://i.postimg.cc/3JLV0Yps/bike-3.webp"), 
-                path: [[21.0227396, 105.8369637], [21.0237, 105.8372], [21.0245, 105.8365], [21.0250, 105.8355]],
-                marker: null,
-                polyline: null
-            }
+        // Define icons
+        const bikeIcons = [
+            createIcon("https://i.postimg.cc/6qxZPGW0/bike-1-removebg-preview.png"),
+            createIcon("https://i.postimg.cc/0jGS12rq/bike-2-removebg-preview.png"),
+            createIcon("https://i.postimg.cc/QNc1TSmn/bike-3-removebg-preview.png")
+        ];
+        const locationIcon = createIcon("https://i.postimg.cc/vZT43v7y/location.png");
+
+        // Randomly generate bike positions within 400-800 meters of the central point
+        function getRandomPosition(center, minDistance, maxDistance) {
+            const angle = Math.random() * Math.PI * 2;
+            const distance = minDistance + Math.random() * (maxDistance - minDistance);
+            const dx = distance * Math.cos(angle);
+            const dy = distance * Math.sin(angle);
+            return [center[0] + dx / 111000, center[1] + dy / (111000 * Math.cos(center[0] * Math.PI / 180))];
+        }
+
+        const centerPoint = [21.0227396, 105.8369637];
+        const bikes = [
+            { name: "Bike 1", icon: bikeIcons[0], position: getRandomPosition(centerPoint, 400, 800), marker: null, polyline: null },
+            { name: "Bike 2", icon: bikeIcons[1], position: getRandomPosition(centerPoint, 400, 800), marker: null, polyline: null },
+            { name: "Bike 3", icon: bikeIcons[2], position: getRandomPosition(centerPoint, 400, 800), marker: null, polyline: null }
         ];
 
-        // Initialize markers and path polylines
+        // Place bike markers on the map
         bikes.forEach((bike) => {
-            bike.marker = L.marker(bike.path[0], { icon: bike.icon })
-                .bindPopup(`${bike.name} is here!`).addTo(map);
-            bike.polyline = L.polyline(bike.path, { color: "blue", weight: 2 }).addTo(map);
+            bike.marker = L.marker(bike.position, { icon: bike.icon })
+                .bindPopup(`${bike.name} is here!`)
+                .addTo(map);
         });
 
-        // Function to simulate bike movement along paths with smooth animation
-        function animateBike(bike) {
-            let index = 0;
-            const moveInterval = setInterval(() => {
-                if (index < bike.path.length) {
-                    bike.marker.setLatLng(bike.path[index]); // Update bike marker position
-                    index++;
-                } else {
-                    index = 0; // Loop back to start of path
-                }
-            }, 1000); // Change position every second for smoother movement
+        // Current location marker
+        var currentLocationMarker = L.marker(centerPoint, { icon: locationIcon }).bindPopup("You are here!");
 
-            // Stop animation when the dropdown is reset
-            bike.stopAnimation = () => clearInterval(moveInterval);
+        // Toggle current location visibility
+        document.getElementById("toggleLocation").addEventListener("click", function() {
+            if (map.hasLayer(currentLocationMarker)) {
+                map.removeLayer(currentLocationMarker);
+                this.innerText = "Current Location";
+            } else {
+                currentLocationMarker.addTo(map);
+                this.innerText = "Hide Location";
+            }
+        });
+
+        // Function to draw path from current location to bike
+        function drawPathToBike(bikePosition) {
+            if (currentPath) map.removeLayer(currentPath);
+            currentPath = L.polyline([centerPoint, bikePosition], { color: 'blue', weight: 3 });
+            map.addLayer(currentPath);
         }
 
-        // Event listener for the dropdown to toggle bike tracking
-        document.getElementById("bikeDropdown").addEventListener("change", function() {
-            const selectedBikeIndex = this.value ? parseInt(this.value) - 1 : null;
-            bikes.forEach((bike, index) => {
-                if (selectedBikeIndex === index) {
+        // Bike tracking toggle
+        let tracking = false;
+        let currentPath = null;
+
+        document.getElementById("toggleTracking").addEventListener("click", function() {
+            tracking = !tracking;
+            if (tracking) {
+                bikes.forEach((bike) => {
                     bike.marker.addTo(map);
-                    bike.polyline.addTo(map);
-                    animateBike(bike);
-                } else {
+                });
+                this.innerText = "Stop Tracking";
+            } else {
+                bikes.forEach((bike) => {
                     map.removeLayer(bike.marker);
-                    map.removeLayer(bike.polyline);
-                    if (bike.stopAnimation) bike.stopAnimation();
-                }
-            });
+                });
+                if (currentPath) map.removeLayer(currentPath);
+                this.innerText = "Track Bikes";
+            }
+        });
+
+        // Bike selection and path drawing
+        document.getElementById("bikeDropdown").addEventListener("change", function() {
+            const selectedBikeIndex = parseInt(this.value) - 1;
+            if (selectedBikeIndex >= 0 && tracking) {
+                drawPathToBike(bikes[selectedBikeIndex].position);
+            }
         });
     </script>
 </body>
