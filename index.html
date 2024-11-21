@@ -12,18 +12,26 @@
             height: 100vh;
             width: 100%;
         }
-        /* Panel and arrow styles */
+
+        /* Panel styles */
         .panel {
             position: absolute;
             top: 0;
             left: 50%;
             transform: translateX(-50%);
-            background-color: rgba(255, 255, 255, 0.8);
+            background-color: rgba(255, 255, 255, 0.7);
             border-radius: 10px;
             padding: 10px;
             z-index: 1000;
-            transition: top 0.4s;
+            transition: top 0.4s ease-in-out;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
+
+        .panel.hidden {
+            top: -80px; /* Fully hides the panel */
+        }
+
+        /* Arrow toggle styles */
         .arrow {
             position: absolute;
             bottom: -20px;
@@ -34,6 +42,8 @@
             color: #333;
             z-index: 1001;
         }
+
+        /* Buttons */
         .buttons {
             position: absolute;
             bottom: 20px;
@@ -43,6 +53,7 @@
             gap: 10px;
             z-index: 1000;
         }
+
         .button {
             padding: 10px 20px;
             background-color: lightgreen;
@@ -51,8 +62,9 @@
             border-radius: 5px;
             cursor: pointer;
             opacity: 0.8;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
+
         .button.active {
             background-color: red;
             color: white;
@@ -62,7 +74,8 @@
 <body>
     <!-- Map container -->
     <div id="map"></div>
-    <!-- Top panel -->
+
+    <!-- Panel with dropdown -->
     <div id="panel" class="panel">
         <select id="bikeSelector">
             <option value="">Select Bike to Track</option>
@@ -73,6 +86,7 @@
         <p id="distance"></p>
         <div class="arrow" id="arrow">⬇</div>
     </div>
+
     <!-- Buttons -->
     <div class="buttons">
         <button id="trackButton" class="button">Track Bikes</button>
@@ -93,26 +107,31 @@
         const locationIcon = L.icon({ iconUrl: 'https://i.postimg.cc/Vv9xz7GS/location-removebg-preview.png', iconSize: [30, 30] });
 
         // Bike positions
-        const bikes = [
-            L.marker([21.025, 105.84], { icon: bikeIcons[0] }).addTo(map),
-            L.marker([21.023, 105.835], { icon: bikeIcons[1] }).addTo(map),
-            L.marker([21.021, 105.838], { icon: bikeIcons[2] }).addTo(map)
+        const bikePositions = [
+            [21.025, 105.84],
+            [21.023, 105.835],
+            [21.021, 105.838]
         ];
+        const bikes = bikePositions.map((position, index) =>
+            L.marker(position, { icon: bikeIcons[index] }).addTo(map).setOpacity(0)
+        );
 
         // Current location marker
-        const currentLocationMarker = L.marker([21.0227396, 105.8369637], { icon: locationIcon }).addTo(map);
+        const currentLocationMarker = L.marker([21.0227396, 105.8369637], { icon: locationIcon })
+            .addTo(map)
+            .setOpacity(0);
 
-        // Arrow toggle
+        // Arrow and panel behavior
         const panel = document.getElementById('panel');
         const arrow = document.getElementById('arrow');
         let panelOpen = true;
 
         arrow.addEventListener('click', () => {
             panelOpen = !panelOpen;
-            panel.style.top = panelOpen ? '0px' : '-80px';
+            panel.classList.toggle('hidden', !panelOpen);
         });
 
-        // Buttons
+        // Buttons behavior
         const trackButton = document.getElementById('trackButton');
         const locationButton = document.getElementById('locationButton');
 
@@ -120,37 +139,36 @@
             this.classList.toggle('active');
             const active = this.classList.contains('active');
             this.textContent = active ? 'Stop Tracking' : 'Track Bikes';
+
+            bikes.forEach(bike => bike.setOpacity(active ? 1 : 0));
         });
 
         locationButton.addEventListener('click', function () {
             this.classList.toggle('active');
             const active = this.classList.contains('active');
             this.textContent = active ? 'Hide Location' : 'Current Location';
+
+            currentLocationMarker.setOpacity(active ? 1 : 0);
         });
 
-        // Select bike to track
+        // Distance lines and bike selection
         const bikeSelector = document.getElementById('bikeSelector');
         const distanceText = document.getElementById('distance');
+        let path;
 
-        function drawPath(selectedBike) {
-            const bikeLatLng = selectedBike.getLatLng();
+        bikeSelector.addEventListener('change', function () {
+            if (path) map.removeLayer(path);
+            distanceText.textContent = '';
+
+            const selectedBikeIndex = parseInt(this.value);
+            if (isNaN(selectedBikeIndex)) return;
+
+            const bikeLatLng = bikes[selectedBikeIndex].getLatLng();
             const currentLatLng = currentLocationMarker.getLatLng();
-            const path = L.polyline([currentLatLng, bikeLatLng], { color: 'blue' }).addTo(map);
+            path = L.polyline([currentLatLng, bikeLatLng], { color: 'blue' }).addTo(map);
 
             const distance = map.distance(currentLatLng, bikeLatLng).toFixed(0);
             distanceText.textContent = `Distance: ${distance} meters`;
-
-            bikeSelector.addEventListener('change', () => {
-                map.removeLayer(path);
-                distanceText.textContent = '';
-            });
-        }
-
-        bikeSelector.addEventListener('change', function () {
-            const selectedBikeIndex = parseInt(this.value);
-            if (selectedBikeIndex >= 0 && selectedBikeIndex < bikes.length) {
-                drawPath(bikes[selectedBikeIndex]);
-            }
         });
     </script>
 </body>
