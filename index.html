@@ -16,31 +16,19 @@
         /* Panel styles */
         .panel {
             position: absolute;
-            top: 0;
+            top: 10px;
             left: 50%;
             transform: translateX(-50%);
             background-color: rgba(255, 255, 255, 0.7);
             border-radius: 10px;
             padding: 10px;
             z-index: 1000;
-            transition: top 0.4s ease-in-out;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
-        .panel.hidden {
-            top: -80px; /* Fully hides the panel */
-        }
-
-        /* Arrow toggle styles */
-        .arrow {
-            position: absolute;
-            bottom: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            cursor: pointer;
-            font-size: 24px;
-            color: #333;
-            z-index: 1001;
+        .panel > select {
+            width: 100%;
+            margin-bottom: 10px;
         }
 
         /* Buttons */
@@ -75,8 +63,12 @@
     <!-- Map container -->
     <div id="map"></div>
 
-    <!-- Panel with dropdown -->
-    <div id="panel" class="panel">
+    <!-- Panel with dropdowns -->
+    <div class="panel">
+        <select id="locationSelector">
+            <option value="">Select Current Location</option>
+            <option value="new">New Location</option>
+        </select>
         <select id="bikeSelector">
             <option value="">Select Bike to Track</option>
             <option value="0">Bike 1</option>
@@ -84,7 +76,6 @@
             <option value="2">Bike 3</option>
         </select>
         <p id="distance"></p>
-        <div class="arrow" id="arrow">⬇</div>
     </div>
 
     <!-- Buttons -->
@@ -95,7 +86,7 @@
 
     <script>
         // Initialize map
-        const map = L.map('map').setView([21.0227396, 105.8369637], 15);
+        const map = L.map('map').setView([21.024421, 105.789906], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
         // Icon configurations
@@ -106,30 +97,21 @@
         ];
         const locationIcon = L.icon({ iconUrl: 'https://i.postimg.cc/Vv9xz7GS/location-removebg-preview.png', iconSize: [30, 30] });
 
-        // Bike positions
+        // Current location marker
+        const currentLocation = [21.024421, 105.789906]; // New latitude/longitude
+        const currentLocationMarker = L.marker(currentLocation, { icon: locationIcon })
+            .addTo(map)
+            .setOpacity(0);
+
+        // Bike positions within 400m-800m from the current location
         const bikePositions = [
-            [21.025, 105.84],
-            [21.023, 105.835],
-            [21.021, 105.838]
+            [21.028, 105.792], // Bike 1
+            [21.025, 105.787], // Bike 2
+            [21.022, 105.791]  // Bike 3
         ];
         const bikes = bikePositions.map((position, index) =>
             L.marker(position, { icon: bikeIcons[index] }).addTo(map).setOpacity(0)
         );
-
-        // Current location marker
-        const currentLocationMarker = L.marker([21.0227396, 105.8369637], { icon: locationIcon })
-            .addTo(map)
-            .setOpacity(0);
-
-        // Arrow and panel behavior
-        const panel = document.getElementById('panel');
-        const arrow = document.getElementById('arrow');
-        let panelOpen = true;
-
-        arrow.addEventListener('click', () => {
-            panelOpen = !panelOpen;
-            panel.classList.toggle('hidden', !panelOpen);
-        });
 
         // Buttons behavior
         const trackButton = document.getElementById('trackButton');
@@ -169,6 +151,15 @@
 
             const distance = map.distance(currentLatLng, bikeLatLng).toFixed(0);
             distanceText.textContent = `Distance: ${distance} meters`;
+        });
+
+        // Location selector
+        const locationSelector = document.getElementById('locationSelector');
+        locationSelector.addEventListener('change', function () {
+            if (this.value === 'new') {
+                map.setView(currentLocation, 15);
+                currentLocationMarker.setLatLng(currentLocation).setOpacity(1);
+            }
         });
     </script>
 </body>
