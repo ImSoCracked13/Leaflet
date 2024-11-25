@@ -3,30 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bike Tracker</title>
+    <title>Bike Tracker with Sonar Effect</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <style>
         #map {
             height: 100vh;
             width: 100%;
         }
+
         .panel {
             position: absolute;
             top: 10px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
             border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            padding: 10px;
             z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
-        .panel > button,
-        .panel > select {
+
+        .panel > select,
+        .panel > button {
             width: 100%;
-            margin: 5px 0;
+            margin-bottom: 10px;
         }
+
         .buttons {
             position: absolute;
             bottom: 20px;
@@ -36,32 +40,32 @@
             gap: 10px;
             z-index: 1000;
         }
+
         .button {
-            padding: 10px;
+            padding: 10px 20px;
+            background-color: lightgreen;
+            color: black;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            opacity: 0.8;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
-        .button.green {
-            background-color: lightgreen;
-        }
-        .button.red {
+
+        .button.active {
             background-color: red;
             color: white;
         }
-        .button.disabled {
+
+        .button.inactive {
             background-color: grey;
-            color: white;
             cursor: not-allowed;
         }
     </style>
 </head>
 <body>
-    <!-- Map container -->
     <div id="map"></div>
 
-    <!-- Panel -->
     <div class="panel">
         <select id="bikeSelector">
             <option value="">Select Bike to Track</option>
@@ -69,134 +73,129 @@
             <option value="1">Bike 2</option>
             <option value="2">Bike 3</option>
         </select>
-        <button id="findDestination" class="button green">Find Destination</button>
-        <p id="distanceText"></p>
-        <button id="simulateButton" class="button disabled">Simulate Driving</button>
+        <button id="findDestinationButton" class="button">Find Destination</button>
+        <p id="distanceLabel"></p>
+        <button id="trackingBikeButton" class="button">Tracking Bike</button>
     </div>
 
-    <!-- Action Buttons -->
     <div class="buttons">
-        <button id="toggleLocation" class="button green">Show Location</button>
-        <button id="toggleMode" class="button green">Dark Mode</button>
+        <button id="locationButton" class="button">Show Location</button>
     </div>
 
     <script>
-        // Initialize map
         const map = L.map('map').setView([21.024421, 105.789906], 15);
-        const tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-        // Icons
         const bikeIcons = [
             L.icon({ iconUrl: 'https://i.postimg.cc/6qxZPGW0/bike-1-removebg-preview.png', iconSize: [40, 40] }),
             L.icon({ iconUrl: 'https://i.postimg.cc/0jGS12rq/bike-2-removebg-preview.png', iconSize: [40, 40] }),
-            L.icon({ iconUrl: 'https://i.postimg.cc/QNc1TSmn/bike-3-removebg-preview.png', iconSize: [40, 40] }),
+            L.icon({ iconUrl: 'https://i.postimg.cc/QNc1TSmn/bike-3-removebg-preview.png', iconSize: [40, 40] })
         ];
         const locationIcon = L.icon({ iconUrl: 'https://i.postimg.cc/ZnWC4bDD/location-removebg-preview.png', iconSize: [30, 30] });
         const destinationIcon = L.icon({ iconUrl: 'https://i.postimg.cc/3NzWwssr/flag-removebg-preview.png', iconSize: [30, 30] });
 
-        // Markers
         const currentLocation = [21.024421, 105.789906];
-        const currentLocationMarker = L.marker(currentLocation, { icon: locationIcon }).addTo(map).setOpacity(0);
-        let destinationMarker = null;
-        const bikeMarkers = bikeIcons.map(icon => L.marker(currentLocation, { icon }).addTo(map).setOpacity(0));
+        const currentLocationMarker = L.marker(currentLocation, { icon: locationIcon })
+            .addTo(map)
+            .setOpacity(0);
 
-        // State variables
-        let selectedBikeIndex = null;
-        let routeLine = null;
+        const bikes = bikeIcons.map((icon) => L.marker(currentLocation, { icon }).addTo(map).setOpacity(0));
 
-        // DOM elements
+        const locationButton = document.getElementById('locationButton');
+        const findDestinationButton = document.getElementById('findDestinationButton');
+        const trackingBikeButton = document.getElementById('trackingBikeButton');
         const bikeSelector = document.getElementById('bikeSelector');
-        const findDestinationButton = document.getElementById('findDestination');
-        const simulateButton = document.getElementById('simulateButton');
-        const toggleLocationButton = document.getElementById('toggleLocation');
-        const toggleModeButton = document.getElementById('toggleMode');
-        const distanceText = document.getElementById('distanceText');
+        const distanceLabel = document.getElementById('distanceLabel');
 
-        // Toggle location visibility
-        toggleLocationButton.addEventListener('click', () => {
-            const isActive = toggleLocationButton.classList.toggle('red');
-            toggleLocationButton.classList.toggle('green', !isActive);
-            toggleLocationButton.textContent = isActive ? 'Hide Location' : 'Show Location';
+        let routingControl = null;
+        let sonarEffect = null;
 
-            currentLocationMarker.setOpacity(isActive ? 1 : 0);
-            bikeMarkers.forEach((marker, index) => {
-                marker.setOpacity(isActive && index === selectedBikeIndex ? 1 : 0);
-            });
+        locationButton.addEventListener('click', function () {
+            this.classList.toggle('active');
+            const active = this.classList.contains('active');
+            this.textContent = active ? 'Hide Location' : 'Show Location';
+            currentLocationMarker.setOpacity(active ? 1 : 0);
         });
 
-        // Toggle map mode
-        toggleModeButton.addEventListener('click', () => {
-            const isDark = toggleModeButton.classList.toggle('red');
-            toggleModeButton.classList.toggle('green', !isDark);
-            toggleModeButton.textContent = isDark ? 'Light Mode' : 'Dark Mode';
-
-            tileLayer.setUrl(isDark
-                ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
-                : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+        bikeSelector.addEventListener('change', function () {
+            bikes.forEach((bike, i) => bike.setOpacity(i == this.value ? 1 : 0));
+            if (routingControl) map.removeControl(routingControl);
+            if (sonarEffect) map.removeLayer(sonarEffect);
+            distanceLabel.textContent = '';
         });
 
-        // Bike selection
-        bikeSelector.addEventListener('change', () => {
-            selectedBikeIndex = parseInt(bikeSelector.value);
+        trackingBikeButton.addEventListener('click', function () {
+            const selectedBikeIndex = parseInt(bikeSelector.value);
             if (isNaN(selectedBikeIndex)) {
-                bikeMarkers.forEach(marker => marker.setOpacity(0));
-                return;
-            }
-            bikeMarkers.forEach((marker, index) => {
-                marker.setOpacity(index === selectedBikeIndex ? 1 : 0);
-            });
-        });
-
-        // Find destination
-        findDestinationButton.addEventListener('click', () => {
-            const isActive = findDestinationButton.classList.toggle('red');
-            findDestinationButton.classList.toggle('green', !isActive);
-            findDestinationButton.textContent = isActive ? 'Stop Navigate' : 'Find Destination';
-
-            if (!isActive) {
-                if (routeLine) map.removeLayer(routeLine);
-                if (destinationMarker) map.removeLayer(destinationMarker);
-                simulateButton.classList.add('disabled');
-                distanceText.textContent = '';
+                alert('Please select a bike first!');
                 return;
             }
 
-            map.once('click', (event) => {
-                const { lat, lng } = event.latlng;
-                destinationMarker = L.marker([lat, lng], { icon: destinationIcon }).addTo(map);
-                const bikeLatLng = bikeMarkers[selectedBikeIndex]?.getLatLng();
+            const bike = bikes[selectedBikeIndex];
+            const waypoints = generateRandomPoints(currentLocation, 5, 3000); // Generate 5 points within a 3km radius
 
-                if (bikeLatLng) {
-                    routeLine = L.polyline([bikeLatLng, [lat, lng]], { color: 'blue' }).addTo(map);
-                    const distance = map.distance(bikeLatLng, [lat, lng]);
-                    distanceText.textContent = `Distance: ${distance.toFixed(2)} meters`;
-                    simulateButton.classList.remove('disabled');
-                }
-            });
+            if (sonarEffect) map.removeLayer(sonarEffect);
+            sonarEffect = L.circle(bike.getLatLng(), {
+                radius: 100, // Radius in meters
+                color: 'blue',
+                fillColor: 'blue',
+                fillOpacity: 0.3
+            }).addTo(map);
+
+            moveBikeBetweenPoints(bike, waypoints, sonarEffect);
         });
 
-        // Simulate driving
-        simulateButton.addEventListener('click', () => {
-            if (simulateButton.classList.contains('disabled') || !destinationMarker || selectedBikeIndex === null) return;
+        function generateRandomPoints(center, count, radius) {
+            const points = [];
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = Math.random() * radius;
+                const dx = r * Math.cos(angle) / 111300; // Convert to latitude
+                const dy = r * Math.sin(angle) / (111300 * Math.cos(center[0])); // Convert to longitude
+                points.push([center[0] + dx, center[1] + dy]);
+            }
+            return points;
+        }
 
-            const bikeMarker = bikeMarkers[selectedBikeIndex];
-            const start = bikeMarker.getLatLng();
-            const end = destinationMarker.getLatLng();
-            const distance = map.distance(start, end);
-            const steps = Math.floor(distance / 100);
-            const latStep = (end.lat - start.lat) / steps;
-            const lngStep = (end.lng - start.lng) / steps;
+        function moveBikeBetweenPoints(bike, points, sonarEffect) {
+            let index = 0;
 
-            let step = 0;
-            const interval = setInterval(() => {
-                if (step >= steps) {
-                    clearInterval(interval);
-                    return;
-                }
-                bikeMarker.setLatLng([start.lat + latStep * step, start.lng + lngStep * step]);
-                step++;
-            }, 1000);
-        });
+            function moveToNextPoint() {
+                if (index >= points.length) return;
+
+                const currentPoint = bike.getLatLng();
+                const nextPoint = points[index];
+                if (routingControl) map.removeControl(routingControl);
+
+                routingControl = L.Routing.control({
+                    waypoints: [currentPoint, nextPoint],
+                    routeWhileDragging: false,
+                    show: false,
+                    createMarker: () => null
+                }).addTo(map);
+
+                routingControl.on('routesfound', function (e) {
+                    const route = e.routes[0].coordinates;
+                    let i = 0;
+
+                    function animate() {
+                        if (i < route.length) {
+                            const newLatLng = route[i];
+                            bike.setLatLng(newLatLng);
+                            sonarEffect.setLatLng(newLatLng); // Update sonar effect position
+                            i++;
+                            setTimeout(animate, 100);
+                        } else {
+                            index++;
+                            moveToNextPoint();
+                        }
+                    }
+                    animate();
+                });
+            }
+
+            moveToNextPoint();
+        }
     </script>
 </body>
 </html>
