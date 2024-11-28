@@ -73,8 +73,8 @@
             <option value="1">Bike 2</option>
             <option value="2">Bike 3</option>
         </select>
-        <p id="distanceLabel"></p>
-        <button id="trackingBikeButton" class="button">Track Bike</button>
+        <p id="distanceLabel">Distance: </p>
+        <button id="trackingBikeButton" class="button">Tracking Bike</button>
     </div>
 
     <div class="buttons">
@@ -116,7 +116,7 @@
         bikeSelector.addEventListener('change', function () {
             bikes.forEach((bike, i) => bike.setOpacity(i == this.value ? 1 : 0));
             if (routingControl) map.removeControl(routingControl);
-            distanceLabel.textContent = '';
+            distanceLabel.textContent = 'Distance: ';
         });
 
         trackingBikeButton.addEventListener('click', function () {
@@ -128,7 +128,7 @@
 
             const bike = bikes[selectedBikeIndex];
             const waypoints = generateRandomPoints(currentLocation, 5, 3000); // Generate 5 points within a 3km radius
-            moveBikeBetweenPoints(bike, waypoints);
+            trackBikeWithDistance(bike, waypoints);
         });
 
         function generateRandomPoints(center, count, radius) {
@@ -143,7 +143,7 @@
             return points;
         }
 
-        function moveBikeBetweenPoints(bike, points) {
+        function trackBikeWithDistance(bike, points) {
             let index = 0;
 
             function moveToNextPoint() {
@@ -161,14 +161,17 @@
                 }).addTo(map);
 
                 routingControl.on('routesfound', function (e) {
-                    const route = e.routes[0].coordinates;
+                    const route = e.routes[0];
+                    const routeDistance = (route.summary.totalDistance / 1000).toFixed(2); // Convert to kilometers
+                    distanceLabel.textContent = `Distance: ${routeDistance} km`;
+
+                    const coordinates = route.coordinates;
                     let i = 0;
 
                     function animate() {
-                        if (i < route.length) {
-                            bike.setLatLng(route[i]);
+                        if (i < coordinates.length) {
+                            bike.setLatLng(coordinates[i]);
                             i++;
-                            distanceLabel.textContent = `Distance: ${e.routes[0].summary.totalDistance} meters`;
                             setTimeout(animate, 100);
                         } else {
                             index++;
