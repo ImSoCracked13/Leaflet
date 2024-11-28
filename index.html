@@ -21,10 +21,11 @@
             top: 10px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(255, 255, 255, 0.9);
-            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 20px;
             border-radius: 8px;
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
         }
         .controls select, .controls button {
             margin: 5px 0;
@@ -38,6 +39,9 @@
             background: green;
             color: white;
             font-weight: bold;
+        }
+        .controls button.secondary {
+            background: #007bff;
         }
         .controls button:disabled {
             background: gray;
@@ -63,6 +67,7 @@
     </select>
     <button id="findDestination">Find Destination</button>
     <button id="trackingBike">Start Tracking</button>
+    <button id="showLocation" class="secondary">Show Location</button>
     <p class="distance" id="distanceLabel">Total Distance: N/A</p>
 </div>
 
@@ -103,11 +108,27 @@
     let routingControl = null;
     let trackingInterval = null;
     let selectedBike = null;
+    let locationVisible = true;
 
     const bikeSelector = document.getElementById('bikeSelector');
     const findDestinationButton = document.getElementById('findDestination');
     const trackingBikeButton = document.getElementById('trackingBike');
+    const showLocationButton = document.getElementById('showLocation');
     const distanceLabel = document.getElementById('distanceLabel');
+
+    // Toggle location visibility
+    showLocationButton.addEventListener('click', () => {
+        locationVisible = !locationVisible;
+        if (locationVisible) {
+            map.addLayer(currentMarker);
+            showLocationButton.textContent = "Hide Location";
+            showLocationButton.style.background = "red";
+        } else {
+            map.removeLayer(currentMarker);
+            showLocationButton.textContent = "Show Location";
+            showLocationButton.style.background = "#007bff";
+        }
+    });
 
     // Generate random points within 3 km radius
     function generateRandomPoint(center, radius = 3000) {
