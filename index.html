@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bike Tracker</title>
+    <title>Bike Tracker with Realistic Movement</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
@@ -73,7 +73,7 @@
             <option value="1">Bike 2</option>
             <option value="2">Bike 3</option>
         </select>
-        <p id="distanceLabel" style="display: none;">Distance: </p>
+        <p id="distanceLabel"></p>
         <button id="trackingBikeButton" class="button">Tracking Bike</button>
     </div>
 
@@ -116,6 +116,7 @@
         bikeSelector.addEventListener('change', function () {
             bikes.forEach((bike, i) => bike.setOpacity(i == this.value ? 1 : 0));
             if (routingControl) map.removeControl(routingControl);
+            distanceLabel.textContent = '';
         });
 
         trackingBikeButton.addEventListener('click', function () {
@@ -127,10 +128,7 @@
 
             const bike = bikes[selectedBikeIndex];
             const waypoints = generateRandomPoints(currentLocation, 5, 3000); // Generate 5 points within a 3km radius
-
-            // Hide the distance label while moving
-            distanceLabel.style.display = "none";
-            trackBike(bike, waypoints);
+            moveBikeBetweenPoints(bike, waypoints);
         });
 
         function generateRandomPoints(center, count, radius) {
@@ -145,15 +143,11 @@
             return points;
         }
 
-        function trackBike(bike, points) {
+        function moveBikeBetweenPoints(bike, points) {
             let index = 0;
 
             function moveToNextPoint() {
-                if (index >= points.length) {
-                    // Show the distance label after movement completes
-                    distanceLabel.style.display = "block";
-                    return;
-                }
+                if (index >= points.length) return;
 
                 const currentPoint = bike.getLatLng();
                 const nextPoint = points[index];
@@ -162,8 +156,9 @@
                 routingControl = L.Routing.control({
                     waypoints: [currentPoint, nextPoint],
                     routeWhileDragging: false,
-                    show: false,
-                    createMarker: () => null
+                    show: false, // Hides the route instructions box
+                    createMarker: () => null, // Prevents markers from being added
+                    addWaypoints: false, // Disables adding waypoints on the map
                 }).addTo(map);
 
                 routingControl.on('routesfound', function (e) {
