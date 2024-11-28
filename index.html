@@ -73,7 +73,7 @@
             <option value="1">Bike 2</option>
             <option value="2">Bike 3</option>
         </select>
-        <p id="distanceLabel">Distance to next waypoint: 0 km</p>
+        <p id="distanceLabel"></p>
         <button id="trackingBikeButton" class="button">Tracking Bike</button>
     </div>
 
@@ -91,6 +91,7 @@
             L.icon({ iconUrl: 'https://i.postimg.cc/QNc1TSmn/bike-3-removebg-preview.png', iconSize: [40, 40] })
         ];
         const locationIcon = L.icon({ iconUrl: 'https://i.postimg.cc/ZnWC4bDD/location-removebg-preview.png', iconSize: [30, 30] });
+        const destinationIcon = L.icon({ iconUrl: 'https://i.postimg.cc/3NzWwssr/flag-removebg-preview.png', iconSize: [30, 30] });
 
         const currentLocation = [21.024421, 105.789906];
         const currentLocationMarker = L.marker(currentLocation, { icon: locationIcon })
@@ -115,8 +116,10 @@
 
         bikeSelector.addEventListener('change', function () {
             bikes.forEach((bike, i) => bike.setOpacity(i == this.value ? 1 : 0));
-            if (routingControl) map.removeControl(routingControl);
-            distanceLabel.textContent = 'Distance to next waypoint: 0 km';
+            if (routingControl) {
+                routingControl.getContainer().style.display = 'none'; // Hide route instructions completely
+            }
+            distanceLabel.textContent = '';
         });
 
         trackingBikeButton.addEventListener('click', function () {
@@ -156,10 +159,11 @@
                 routingControl = L.Routing.control({
                     waypoints: [currentPoint, nextPoint],
                     routeWhileDragging: false,
-                    show: false, // Hides the route instructions box
-                    createMarker: () => null, // Prevents markers from being added
-                    addWaypoints: false, // Disables adding waypoints on the map
+                    show: false,
+                    createMarker: () => null
                 }).addTo(map);
+
+                routingControl.getContainer().style.display = 'none'; // Hide instructions box
 
                 routingControl.on('routesfound', function (e) {
                     const route = e.routes[0].coordinates;
@@ -168,8 +172,6 @@
                     function animate() {
                         if (i < route.length) {
                             bike.setLatLng(route[i]);
-                            const distanceToNextPoint = bike.getLatLng().distanceTo(nextPoint) / 1000; // Convert to km
-                            distanceLabel.textContent = `Distance to next waypoint: ${distanceToNextPoint.toFixed(2)} km`;
                             i++;
                             setTimeout(animate, 100);
                         } else {
