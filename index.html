@@ -73,7 +73,7 @@
             <option value="1">Bike 2</option>
             <option value="2">Bike 3</option>
         </select>
-        <p id="distanceLabel"></p>
+        <p id="distanceLabel">Distance to next waypoint: 0 km</p>
         <button id="trackingBikeButton" class="button">Tracking Bike</button>
     </div>
 
@@ -116,7 +116,7 @@
         bikeSelector.addEventListener('change', function () {
             bikes.forEach((bike, i) => bike.setOpacity(i == this.value ? 1 : 0));
             if (routingControl) map.removeControl(routingControl);
-            distanceLabel.textContent = '';
+            distanceLabel.textContent = 'Distance to next waypoint: 0 km';
         });
 
         trackingBikeButton.addEventListener('click', function () {
@@ -168,6 +168,8 @@
                     function animate() {
                         if (i < route.length) {
                             bike.setLatLng(route[i]);
+                            const distanceToNextPoint = bike.getLatLng().distanceTo(nextPoint) / 1000; // Convert to km
+                            distanceLabel.textContent = `Distance to next waypoint: ${distanceToNextPoint.toFixed(2)} km`;
                             i++;
                             setTimeout(animate, 100);
                         } else {
