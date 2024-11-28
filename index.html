@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bike Tracker with Sonar Effect</title>
+    <title>Bike Tracker with Realistic Movement</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
@@ -108,7 +108,6 @@
         const distanceLabel = document.getElementById('distanceLabel');
 
         let routingControl = null;
-        let sonarEffect = null;
 
         locationButton.addEventListener('click', function () {
             this.classList.toggle('active');
@@ -120,8 +119,18 @@
         bikeSelector.addEventListener('change', function () {
             bikes.forEach((bike, i) => bike.setOpacity(i == this.value ? 1 : 0));
             if (routingControl) map.removeControl(routingControl);
-            if (sonarEffect) map.removeLayer(sonarEffect);
             distanceLabel.textContent = '';
+        });
+
+        findDestinationButton.addEventListener('click', function () {
+            this.classList.toggle('active');
+            const active = this.classList.contains('active');
+            this.textContent = active ? 'Stop Navigate' : 'Find Destination';
+
+            if (!active && routingControl) {
+                map.removeControl(routingControl);
+                distanceLabel.textContent = '';
+            }
         });
 
         trackingBikeButton.addEventListener('click', function () {
@@ -133,16 +142,7 @@
 
             const bike = bikes[selectedBikeIndex];
             const waypoints = generateRandomPoints(currentLocation, 5, 3000); // Generate 5 points within a 3km radius
-
-            if (sonarEffect) map.removeLayer(sonarEffect);
-            sonarEffect = L.circle(bike.getLatLng(), {
-                radius: 100, // Radius in meters
-                color: 'blue',
-                fillColor: 'blue',
-                fillOpacity: 0.3
-            }).addTo(map);
-
-            moveBikeBetweenPoints(bike, waypoints, sonarEffect);
+            moveBikeBetweenPoints(bike, waypoints);
         });
 
         function generateRandomPoints(center, count, radius) {
@@ -157,7 +157,7 @@
             return points;
         }
 
-        function moveBikeBetweenPoints(bike, points, sonarEffect) {
+        function moveBikeBetweenPoints(bike, points) {
             let index = 0;
 
             function moveToNextPoint() {
@@ -180,9 +180,7 @@
 
                     function animate() {
                         if (i < route.length) {
-                            const newLatLng = route[i];
-                            bike.setLatLng(newLatLng);
-                            sonarEffect.setLatLng(newLatLng); // Update sonar effect position
+                            bike.setLatLng(route[i]);
                             i++;
                             setTimeout(animate, 100);
                         } else {
