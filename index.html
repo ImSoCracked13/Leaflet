@@ -26,6 +26,7 @@
             border-radius: 8px;
             box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
             z-index: 1000;
+            text-align: center;
         }
         .controls select, .controls button {
             margin: 5px 0;
@@ -41,11 +42,7 @@
             font-weight: bold;
         }
         .controls button.secondary {
-            background: #007bff;
-        }
-        .controls button:disabled {
-            background: gray;
-            cursor: not-allowed;
+            background: red;
         }
         .distance {
             margin-top: 10px;
@@ -68,33 +65,21 @@
     <button id="findDestination">Find Destination</button>
     <button id="trackingBike">Start Tracking</button>
     <button id="showLocation" class="secondary">Show Location</button>
-    <p class="distance" id="distanceLabel">Total Distance: N/A</p>
+    <p class="distance" id="distanceLabel">Distance: N/A</p>
 </div>
 
 <script>
-    // Initialize the map
     const map = L.map('map').setView([21.022736, 105.852194], 13);
 
-    // Add OpenStreetMap tiles
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 19
     }).addTo(map);
 
-    // Bike icons
     const bikeIcons = {
-        "Bike 1": L.icon({
-            iconUrl: "https://i.postimg.cc/6qxZPGW0/bike-1-removebg-preview.png",
-            iconSize: [40, 40]
-        }),
-        "Bike 2": L.icon({
-            iconUrl: "https://i.postimg.cc/0jGS12rq/bike-2-removebg-preview.png",
-            iconSize: [40, 40]
-        }),
-        "Bike 3": L.icon({
-            iconUrl: "https://i.postimg.cc/QNc1TSmn/bike-3-removebg-preview.png",
-            iconSize: [40, 40]
-        })
+        "Bike 1": L.icon({ iconUrl: "https://i.postimg.cc/6qxZPGW0/bike-1-removebg-preview.png", iconSize: [40, 40] }),
+        "Bike 2": L.icon({ iconUrl: "https://i.postimg.cc/0jGS12rq/bike-2-removebg-preview.png", iconSize: [40, 40] }),
+        "Bike 3": L.icon({ iconUrl: "https://i.postimg.cc/QNc1TSmn/bike-3-removebg-preview.png", iconSize: [40, 40] })
     };
 
     const currentLocation = [21.022736, 105.852194];
@@ -126,7 +111,7 @@
         } else {
             map.removeLayer(currentMarker);
             showLocationButton.textContent = "Show Location";
-            showLocationButton.style.background = "#007bff";
+            showLocationButton.style.background = "green";
         }
     });
 
@@ -173,7 +158,7 @@
         routingControl.on('routesfound', (e) => {
             const distanceInMeters = e.routes[0].summary.totalDistance;
             const distanceInKm = (distanceInMeters / 1000).toFixed(2);
-            distanceLabel.textContent = `Total Distance: ${distanceInKm} km`;
+            distanceLabel.textContent = `Distance: ${distanceInKm} km`;
         });
     });
 
@@ -202,17 +187,6 @@
             }
 
             bikeMarker.setLatLng(randomPoints[pointIndex]);
-            const auraCircle = L.circle(randomPoints[pointIndex], {
-                radius: 100,
-                color: 'blue',
-                fillColor: 'blue',
-                fillOpacity: 0.3
-            }).addTo(map);
-
-            setTimeout(() => {
-                map.removeLayer(auraCircle);
-            }, 900);
-
             pointIndex++;
         }, 1000);
     });
