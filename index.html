@@ -8,11 +8,13 @@
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
     <style>
+        /* Map container styling */
         #map {
             height: 100vh;
             width: 100%;
         }
 
+        /* Panel for controls and display */
         .panel {
             position: absolute;
             top: 10px;
@@ -25,12 +27,14 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
+        /* Style for buttons and dropdowns in the panel */
         .panel > select,
         .panel > button {
             width: 100%;
             margin-bottom: 10px;
         }
 
+        /* Style for floating buttons */
         .buttons {
             position: absolute;
             bottom: 20px;
@@ -41,6 +45,7 @@
             z-index: 1000;
         }
 
+        /* General button styling */
         .button {
             padding: 10px 20px;
             background-color: lightgreen;
@@ -49,17 +54,12 @@
             border-radius: 5px;
             cursor: pointer;
             opacity: 0.8;
-            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
+        /* Button for active states */
         .button.active {
             background-color: red;
             color: white;
-        }
-
-        .button.inactive {
-            background-color: grey;
-            cursor: not-allowed;
         }
     </style>
 </head>
@@ -67,24 +67,32 @@
     <div id="map"></div>
 
     <div class="panel">
+        <!-- Dropdown to select a bike -->
         <select id="bikeSelector">
             <option value="">Select Bike to Track</option>
             <option value="0">Bike 1</option>
             <option value="1">Bike 2</option>
             <option value="2">Bike 3</option>
         </select>
+        <!-- Display distance to next waypoint -->
         <p id="distanceLabel">Distance to next waypoint: 0 km</p>
+        <!-- Button to start tracking the bike -->
         <button id="trackingBikeButton" class="button">Tracking Bike</button>
     </div>
 
+    <!-- Button to show/hide current location -->
     <div class="buttons">
         <button id="locationButton" class="button">Show Location</button>
     </div>
 
     <script>
+        // Initialize map
         const map = L.map('map').setView([21.024421, 105.789906], 15);
+
+        // Add tile layer to map
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
+        // Icons for bikes, location, and destination
         const bikeIcons = [
             L.icon({ iconUrl: 'https://i.postimg.cc/6qxZPGW0/bike-1-removebg-preview.png', iconSize: [40, 40] }),
             L.icon({ iconUrl: 'https://i.postimg.cc/0jGS12rq/bike-2-removebg-preview.png', iconSize: [40, 40] }),
@@ -93,11 +101,13 @@
         const locationIcon = L.icon({ iconUrl: 'https://i.postimg.cc/ZnWC4bDD/location-removebg-preview.png', iconSize: [30, 30] });
         const destinationIcon = L.icon({ iconUrl: 'https://i.postimg.cc/3NzWwssr/flag-removebg-preview.png', iconSize: [30, 30] });
 
+        // Current location marker
         const currentLocation = [21.024421, 105.789906];
         const currentLocationMarker = L.marker(currentLocation, { icon: locationIcon })
             .addTo(map)
             .setOpacity(0);
 
+        // Add bike markers
         const bikes = bikeIcons.map((icon) => L.marker(currentLocation, { icon }).addTo(map).setOpacity(0));
 
         const locationButton = document.getElementById('locationButton');
@@ -107,6 +117,7 @@
 
         let routingControl = null;
 
+        // Toggle current location visibility
         locationButton.addEventListener('click', function () {
             this.classList.toggle('active');
             const active = this.classList.contains('active');
@@ -114,14 +125,16 @@
             currentLocationMarker.setOpacity(active ? 1 : 0);
         });
 
+        // Select bike to track
         bikeSelector.addEventListener('change', function () {
             bikes.forEach((bike, i) => bike.setOpacity(i == this.value ? 1 : 0));
             if (routingControl) {
-                routingControl.getContainer().style.display = 'none'; // Hide route instructions completely
+                routingControl.getContainer().style.display = 'none'; // Hide route instructions
             }
             distanceLabel.textContent = 'Distance to next waypoint: 0 km';
         });
 
+        // Start tracking selected bike
         trackingBikeButton.addEventListener('click', function () {
             const selectedBikeIndex = parseInt(bikeSelector.value);
             if (isNaN(selectedBikeIndex)) {
@@ -130,10 +143,11 @@
             }
 
             const bike = bikes[selectedBikeIndex];
-            const waypoints = generateRandomPoints(currentLocation, 5, 3000); // Generate 5 points within a 3km radius
+            const waypoints = generateRandomPoints(currentLocation, 5, 3000); // Generate random waypoints
             moveBikeBetweenPoints(bike, waypoints);
         });
 
+        // Generate random points for the route
         function generateRandomPoints(center, count, radius) {
             const points = [];
             for (let i = 0; i < count; i++) {
@@ -146,6 +160,7 @@
             return points;
         }
 
+        // Move bike along waypoints
         function moveBikeBetweenPoints(bike, points) {
             let index = 0;
 
@@ -158,6 +173,7 @@
                     map.removeControl(routingControl);
                 }
 
+                // Add routing control for the route
                 routingControl = L.Routing.control({
                     waypoints: [currentPoint, nextPoint],
                     routeWhileDragging: false,
@@ -165,7 +181,7 @@
                     createMarker: () => null
                 }).addTo(map);
 
-                routingControl.getContainer().style.display = 'none'; // Hide instructions box
+                routingControl.getContainer().style.display = 'none'; // Hide instructions
 
                 routingControl.on('routesfound', function (e) {
                     const route = e.routes[0].coordinates;
@@ -174,7 +190,7 @@
                     function animate() {
                         if (i < route.length) {
                             bike.setLatLng(route[i]);
-                            updateDistance(route[i], nextPoint);
+                            updateDistance(route[i], nextPoint); // Update distance label
                             i++;
                             setTimeout(animate, 100);
                         } else {
@@ -189,6 +205,7 @@
             moveToNextPoint();
         }
 
+        // Update distance to next waypoint
         function updateDistance(currentLocation, nextLocation) {
             const distance = map.distance(currentLocation, nextLocation);
             const distanceInKm = (distance / 1000).toFixed(2); // Convert meters to kilometers
